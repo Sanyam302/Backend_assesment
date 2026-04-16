@@ -1,0 +1,91 @@
+import Task from "../models/Task.js";
+import User from "../models/User.js";
+import Redis from "ioredis";
+import { asyncHandler } from "../utils/asynchandler.js";
+
+export   const createTask =asyncHandler(async (req, res) => {
+  const { title, description } = req.body;
+
+  if (!title) {
+    return res.status(400).json({ message: "Title is required" });
+  }
+
+  const task = await Task.create({
+    title,
+    description,
+    user: req.user._id, 
+  });
+
+  res.status(201).json(task);
+});
+
+export const getTasks = asyncHandler(async (req, res) => {
+  if(req.user.role === "admin"){
+    const users = await User.find().select("-password");
+
+  res.status(200).json(users);
+
+  }
+  else{
+  const tasks = await Task.find({ user: req.user._id });
+  res.status(200).json(tasks);
+}
+});
+
+export const updateTask = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { title, description } = req.body;
+
+  const task = await Task.findById(id);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  if (task.user.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  task.title = title || task.title;
+  task.description = description || task.description;
+
+  await task.save();
+
+  res.status(200).json(task);
+});
+
+export const deleteTask = asyncHandler(async (req, res) => {
+  if(req.user.role === "admin"){
+    const { id } = req.params;
+    const user= await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.remove();
+
+    return res.status(200).json({ message: "User deleted successfully" });
+
+  }
+  
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+  const { id } = req.params;
+
+  const task = await Task.findById(id);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  if (task.user.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  await task.remove();
+
+  res.status(200).json({ message: "Task deleted successfully" });
+});

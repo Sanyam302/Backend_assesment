@@ -1,0 +1,33 @@
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import  {asyncHandler } from "../utils/asynchandler.js";
+import  ApiError  from "../utils/ApiError.js";
+
+const verifyJWT = asyncHandler(async (req, res, next) => {
+  const token =
+    req.cookies?.accessToken ||
+    req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    throw new ApiError(401, "Unauthorized request");
+  }
+
+  const decodedToken = jwt.verify(
+    token,
+    process.env.JWT_SECRET_KEY
+  );
+  console.log("Decoded:", decodedToken)
+  const user = await User.findById(decodedToken._id).select(
+    "-password -refreshToken"
+  );
+  
+console.log("User:", user);
+
+  if (!user) {
+   return res.status(401).json({ message: "Unauthorized" });
+}
+  req.user = user;
+  next();
+});
+
+export default verifyJWT;
