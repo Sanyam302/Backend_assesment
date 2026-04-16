@@ -1,0 +1,224 @@
+{
+  "info": {
+    "name": "TaskFlow API",
+    "description": "Complete API collection for TaskFlow — JWT Auth + RBAC + Task CRUD",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:5000" },
+    { "key": "accessToken",  "value": "" },
+    { "key": "taskId",       "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "if (res.data && res.data.accessToken) {",
+            "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+            "  pm.test('Registered successfully', () => pm.response.to.have.status(201));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "if (res.data && res.data.accessToken) {",
+            "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+            "  pm.test('Login successful', () => pm.response.to.have.status(200));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            }
+          }
+        },
+        
+        {
+          "name": "Get Current User (me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Register — Validation Error (weak password)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Returns 422 for weak password', () => pm.response.to.have.status(422));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bad User\",\n  \"email\": \"bad@example.com\",\n  \"password\": \"weak\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tasks?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tasks"],
+              "query": [
+                { "key": "page",     "value": "1" },
+                { "key": "limit",    "value": "10" },
+                { "key": "status",   "value": "", "disabled": true },
+                { "key": "priority", "value": "", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "List Tasks — Filter by Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/tasks?status=pending&priority=high",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Create Task",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "if (res.data && res.data.task) {",
+            "  pm.collectionVariables.set('taskId', res.data.task.id);",
+            "  pm.test('Task created', () => pm.response.to.have.status(201));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/tasks",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Build the TaskFlow API\",\n  \"description\": \"Implement JWT auth, RBAC, CRUD, and Swagger docs.\",\n  \"priority\": \"critical\",\n  \"status\": \"in_progress\",\n  \"due_date\": \"2025-12-31\",\n  \"tags\": [\"backend\", \"internship\", \"api\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Task — Validation Error (no title)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Returns 422 for missing title', () => pm.response.to.have.status(422));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/tasks",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"priority\": \"high\"\n}" }
+          }
+        },
+        {
+          "name": "Get Task by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\",\n  \"priority\": \"medium\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Task",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Task deleted', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        
+        {
+          "name": "Deactivate User",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/admin/users/USER_ID_HERE/status",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"is_active\": false\n}" }
+          }
+        },
+        {
+          "name": "Admin Route — User Role Forbidden (403)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Returns 403 for non-admin', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/stats",
+            "header": [{ "key": "Authorization", "value": "Bearer REGULAR_USER_TOKEN" }]
+          }
+        }
+      ]
+    }
+
+        
+      ]
+    }
+  
