@@ -1,6 +1,6 @@
 import Task from "../models/Task.js";
 import User from "../models/User.js";
-import Redis from "ioredis";
+import Redis from "../utils/redis.js";   
 import { asyncHandler } from "../utils/asynchandler.js";
 
 export   const createTask =asyncHandler(async (req, res) => {
@@ -28,7 +28,19 @@ export const getTasks = asyncHandler(async (req, res) => {
 
   }
   else{
+  
+  const id= req.user._id.toString();
+  const cached = await redis.get(`tasks:${id}`);
+  if (cached) {
+    return res.status(200).json(JSON.parse(cached));
+  }
   const tasks = await Task.find({ user: req.user._id });
+  await redis.setex(
+    `tasks:${id}`,
+    60,
+    JSON.stringify(tasks)
+  );
+
   res.status(200).json(tasks);
   console.log("Tasks fetched:", tasks);
 }
@@ -50,8 +62,9 @@ export const updateTask = asyncHandler(async (req, res) => {
 
   task.title = title || task.title;
   task.description = description || task.description;
-
+   await redis.del(`tasks:${req.user._id}`);
   await task.save();
+ 
   console.log("Task updated:", task);
   res.status(200).json(task);
 });
@@ -85,7 +98,7 @@ export const deleteTask = asyncHandler(async (req, res) => {
   if (task.user.toString() !== req.user._id.toString()) {
     return res.status(403).json({ message: "Forbidden" });
   }
-
+ await redis.del(`tasks:${req.user._id}`);
   await task.deleteOne();
   console.log("Task deleted:", task);
   res.status(200).json({ message: "Task deleted successfully" });
