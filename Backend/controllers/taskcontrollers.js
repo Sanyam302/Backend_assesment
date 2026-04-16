@@ -15,6 +15,7 @@ export   const createTask =asyncHandler(async (req, res) => {
     description,
     user: req.user._id, 
   });
+  console.log("Task created:", task);
 
   res.status(201).json(task);
 });
@@ -29,6 +30,7 @@ export const getTasks = asyncHandler(async (req, res) => {
   else{
   const tasks = await Task.find({ user: req.user._id });
   res.status(200).json(tasks);
+  console.log("Tasks fetched:", tasks);
 }
 });
 
@@ -50,11 +52,12 @@ export const updateTask = asyncHandler(async (req, res) => {
   task.description = description || task.description;
 
   await task.save();
-
+  console.log("Task updated:", task);
   res.status(200).json(task);
 });
 
 export const deleteTask = asyncHandler(async (req, res) => {
+
   if(req.user.role === "admin"){
     const { id } = req.params;
     const user= await User.findById(id);
@@ -70,9 +73,7 @@ export const deleteTask = asyncHandler(async (req, res) => {
   }
   
 
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
-  }
+  
   const { id } = req.params;
 
   const task = await Task.findById(id);
@@ -85,7 +86,7 @@ export const deleteTask = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  await task.remove();
-
+  await task.deleteOne();
+  console.log("Task deleted:", task);
   res.status(200).json({ message: "Task deleted successfully" });
 });
